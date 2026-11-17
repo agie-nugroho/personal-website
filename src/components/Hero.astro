@@ -1,0 +1,117 @@
+---
+import Icon from "./Icon.astro";
+import { site } from "../data/site";
+
+const meta = [
+  { label: "Based in", value: "Bekasi, Indonesia" },
+  { label: "Education", value: "S.Mat. ( Mathematics )" },
+  { label: "Focus", value: "Data Analytics" },
+  { label: "Availability", value: "Open to opportunities" },
+];
+---
+
+<section
+  id="home"
+  data-section="home"
+  class="relative flex min-h-[100svh] flex-col overflow-hidden pb-10 pt-[120px] md:pb-12 md:pt-[144px]"
+>
+  <div class="hairline-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
+
+  <svg
+    class="pointer-events-none absolute bottom-0 left-0 h-[46%] w-full text-accent opacity-40"
+    viewBox="0 0 1200 300"
+    preserveAspectRatio="none"
+    fill="none"
+    aria-hidden="true"
+  >
+    <defs>
+      <linearGradient id="hero-fill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="currentColor" stop-opacity="0.14"></stop>
+        <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+      </linearGradient>
+    </defs>
+    <path
+      id="hero-area"
+      d="M0 300 L0 220 L100 190 L200 210 L300 150 L400 170 L500 110 L600 140 L700 90 L800 120 L900 60 L1000 95 L1100 40 L1200 70 L1200 300 Z"
+      fill="url(#hero-fill)"
+      opacity="0"></path>
+    <polyline
+      id="hero-line"
+      points="0,220 100,190 200,210 300,150 400,170 500,110 600,140 700,90 800,120 900,60 1000,95 1100,40 1200,70"
+      stroke="currentColor"
+      stroke-width="1.5"
+      stroke-linecap="round"
+      stroke-linejoin="round"></polyline>
+  </svg>
+
+  <div class="shell relative z-10">
+    <div class="flex flex-col gap-9 border-b border-line pb-9 md:gap-12 md:pb-11">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <p class="eyebrow flex items-center gap-2.5">
+          <span class="relative flex h-1.5 w-1.5">
+            <span class="absolute inset-0 animate-ping rounded-full bg-accent opacity-60"></span>
+            <span class="relative h-1.5 w-1.5 rounded-full bg-accent"></span>
+          </span>
+          Portfolio — 2026
+        </p>
+        <p class="eyebrow hidden items-center gap-2 sm:flex">
+          <Icon name="map-pin" size={12} />
+          {site.location}
+        </p>
+      </div>
+
+      <div>
+        <p class="mb-5 max-w-md text-[13.5px] leading-relaxed text-muted" data-reveal>
+          Hi, I'm Agie Nugroho, data analyst with a mathematician's habit of
+          checking the assumptions first.
+        </p>
+
+        <h1
+          class="font-display text-[clamp(2.85rem,8.6vw,7.2rem)] leading-[0.93] tracking-[-0.025em]"
+        >
+          <span class="block overflow-hidden pb-[0.04em]" data-hero-line>
+            <span class="block">I turn raw data</span>
+          </span>
+          <span class="block overflow-hidden pb-[0.06em]" data-hero-line>
+            <span class="block">into <em class="italic text-accent">decisions</em>.</span>
+          </span>
+        </h1>
+      </div>
+
+      <div class="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-end md:gap-16">
+        <p class="max-w-xl text-[14.5px] leading-relaxed text-ink-soft md:text-[15.5px]" data-reveal>
+          Mathematics graduate from Universitas Jenderal Soedirman, focused on
+          analytics, business intelligence and visualisation, helping teams read
+          their numbers clearly and act on them with confidence.
+        </p>
+
+        <div class="flex flex-wrap items-center gap-x-6 gap-y-3 md:justify-end" data-reveal>
+          <a href={site.cv} download class="btn btn-solid">
+            <Icon name="download" size={15} />
+            Download CV
+          </a>
+          <a href="#work" class="btn btn-outline">
+            View selected work
+            <Icon name="arrow-down" size={15} />
+          </a>
+          <a href={`mailto:${site.email}`} class="link-line font-mono text-[11px] uppercase tracking-[0.14em] text-muted hover:text-ink">Email me</a>
+        </div>
+      </div>
+    </div>
+
+    <dl
+      class="grid grid-cols-2 gap-x-6 gap-y-6 pt-7 sm:grid-cols-4 md:pt-9"
+      data-reveal
+      aria-label="Quick facts"
+    >
+      {
+        meta.map((item) => (
+          <div class="flex flex-col gap-1.5">
+            <dt class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted">{item.label}</dt>
+            <dd class="text-[13.5px] leading-snug text-ink">{item.value}</dd>
+          </div>
+        ))
+      }
+    </dl>
+  </div>
+</section>

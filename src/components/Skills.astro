@@ -1,0 +1,39 @@
+---
+import SectionHeading from "./SectionHeading.astro";
+import { skills } from "../data/skills";
+---
+
+<section id="skills" data-section="skills" class="section-y border-t border-line bg-raise">
+  <div class="shell">
+    <SectionHeading
+      index="02"
+      title="The toolkit, in the order I reach for it."
+      kicker="Grouped by how each tool actually shows up in a project from the first query to the dashboard on someone's screen."
+    />
+
+    <div class="mt-12 md:mt-16">
+      {
+        skills.map((group) => (
+          <div
+            class="group grid gap-4 border-t border-line py-7 md:grid-cols-[240px_minmax(0,1fr)] md:gap-12 md:py-8"
+            data-reveal
+          >
+            <div>
+              <h3 class="flex items-baseline gap-2 text-[15px] font-medium tracking-[-0.01em] text-ink transition-colors duration-300 group-hover:text-accent">
+                {group.label}
+              </h3>
+              <p class="mt-1 text-[12.5px] text-muted">{group.note}</p>
+            </div>
+            <ul class="flex flex-wrap items-center gap-x-2 gap-y-2.5 md:justify-end">
+              {group.items.map((item) => (
+                <li class="rounded-full border border-line bg-paper px-3.5 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-soft transition-colors duration-300 group-hover:border-line-strong">
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </div>
+  </div>
+</section>

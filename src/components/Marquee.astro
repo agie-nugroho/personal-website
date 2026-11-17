@@ -1,0 +1,25 @@
+---
+import { marquee } from "../data/site";
+---
+
+<div class="marquee relative overflow-hidden border-b border-line bg-raise py-4" aria-hidden="true">
+  <div
+    class="marquee-track flex w-max items-center"
+    style="mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)"
+  >
+    {
+      [0, 1].map(() => (
+        <div class="flex shrink-0 items-center">
+          {marquee.map((item) => (
+            <span class="flex items-center">
+              <span class="px-5 font-mono text-[10.5px] uppercase tracking-[0.2em] text-muted">
+                {item}
+              </span>
+              <span class="h-1 w-1 rounded-full bg-line-strong" />
+            </span>
+          ))}
+        </div>
+      ))
+    }
+  </div>
+</div>

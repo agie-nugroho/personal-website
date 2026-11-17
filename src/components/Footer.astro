@@ -1,0 +1,77 @@
+---
+import Icon from "./Icon.astro";
+import { nav, site } from "../data/site";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-line">
+  <div class="shell flex flex-col gap-8 py-10 md:flex-row md:items-center md:justify-between md:py-12">
+    <div class="flex items-center gap-3">
+      <span
+        class="flex h-9 w-9 items-center justify-center rounded-[9px] bg-ink font-mono text-[11px] tracking-[0.06em] text-paper"
+        >{site.initials}</span
+      >
+      <div>
+        <p class="text-[13.5px] font-medium leading-tight">{site.name}</p>
+        <p class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted">
+          {site.role} — {site.location}
+        </p>
+      </div>
+    </div>
+
+    <nav aria-label="Footer">
+      <ul class="flex flex-wrap gap-x-6 gap-y-2">
+        {
+          nav.map((item) => (
+            <li>
+              <a
+                href={`#${item.id}`}
+                class="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted transition-colors hover:text-ink"
+              >
+                {item.label}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a
+        href={site.github}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="GitHub profile"
+        class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition-colors duration-300 hover:border-ink hover:text-ink"
+      >
+        <Icon name="github" size={14} />
+      </a>
+      <a
+        href={site.linkedin}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="LinkedIn profile"
+        class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition-colors duration-300 hover:border-ink hover:text-ink"
+      >
+        <Icon name="linkedin" size={14} />
+      </a>
+      <a
+        href={`mailto:${site.email}`}
+        aria-label="Send an email"
+        class="flex h-9 w-9 items-center justify-center rounded-full border border-line text-muted transition-colors duration-300 hover:border-ink hover:text-ink"
+      >
+        <Icon name="mail" size={14} />
+      </a>
+    </div>
+  </div>
+
+  <div class="shell flex flex-col gap-2 border-t border-line py-5 md:flex-row md:items-center md:justify-between">
+    <p class="font-mono text-[9.5px] uppercase tracking-[0.12em] text-muted">
+      © {year} {site.name}. All rights reserved.
+    </p>
+    <p class="font-mono text-[9.5px] uppercase tracking-[0.12em] text-muted">
+      Built with data, curiosity and a lot of coffee.
+    </p>
+  </div>
+</footer>

@@ -1,0 +1,33 @@
+---
+import { strokeIcons, fillIcons, type StrokeIconName, type FillIconName } from "../lib/icons";
+
+type Props = {
+  name: StrokeIconName | FillIconName;
+  size?: number;
+  class?: string;
+  strokeWidth?: number;
+};
+
+const { name, size = 18, class: className = "", strokeWidth = 1.6 } = Astro.props;
+
+const isFilled = name in fillIcons;
+const markup = isFilled
+  ? fillIcons[name as FillIconName]
+  : strokeIcons[name as StrokeIconName];
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill={isFilled ? "currentColor" : "none"}
+  stroke={isFilled ? "none" : "currentColor"}
+  stroke-width={isFilled ? undefined : strokeWidth}
+  stroke-linecap={isFilled ? undefined : "round"}
+  stroke-linejoin={isFilled ? undefined : "round"}
+  class={className}
+  aria-hidden="true"
+  focusable="false"
+  set:html={markup}
+/>
