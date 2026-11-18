@@ -4,7 +4,9 @@ import Lenis from "lenis";
 
 gsap.registerPlugin(ScrollTrigger);
 
-const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const prefersReducedMotion = window.matchMedia(
+  "(prefers-reduced-motion: reduce)",
+).matches;
 
 /* ------------------------------------------------------------------
    Theme
@@ -39,18 +41,23 @@ syncThemeState();
 ------------------------------------------------------------------ */
 let lenis: Lenis | null = null;
 
-if (!prefersReducedMotion) {
-  lenis = new Lenis({
-    duration: 1.05,
-    easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-    smoothWheel: true,
-    touchMultiplier: 1.4,
-  });
+// Lenis stays on even when the OS asks for reduced motion: passive wheel
+// smoothing is switched off there, but scrolls the visitor explicitly asks for
+// (clicking a nav link or the back-to-top button) still glide instead of
+// jumping. Reveal and counter animations stay off for reduced motion below.
+lenis = new Lenis({
+  duration: 1.05,
+  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+  smoothWheel: !prefersReducedMotion,
+  // Lenis forces every programmatic scrollTo to be instant while the OS asks
+  // for reduced motion; keep that decision ours so button/anchor clicks glide.
+  respectReducedMotion: false,
+  touchMultiplier: 1.4,
+});
 
-  lenis.on("scroll", ScrollTrigger.update);
-  gsap.ticker.add((time) => lenis?.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
-}
+lenis.on("scroll", ScrollTrigger.update);
+gsap.ticker.add((time) => lenis?.raf(time * 1000));
+gsap.ticker.lagSmoothing(0);
 
 /* ------------------------------------------------------------------
    Header, progress bar, active section and back-to-top
@@ -58,8 +65,12 @@ if (!prefersReducedMotion) {
 const header = document.getElementById("site-header");
 const progressBar = document.getElementById("scroll-progress");
 const backToTop = document.querySelector<HTMLButtonElement>("#back-to-top");
-const navLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>("[data-nav-link]"));
-const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-section]"));
+const navLinks = Array.from(
+  document.querySelectorAll<HTMLAnchorElement>("[data-nav-link]"),
+);
+const sections = Array.from(
+  document.querySelectorAll<HTMLElement>("[data-section]"),
+);
 
 function onScroll() {
   const scrollY = window.scrollY;
@@ -150,8 +161,50 @@ document.addEventListener("keydown", (event) => {
 });
 
 window.addEventListener("resize", () => {
-  if (window.innerWidth >= 1024 && menu?.classList.contains("is-open")) setMenu(false);
+  if (window.innerWidth >= 1024 && menu?.classList.contains("is-open"))
+    setMenu(false);
 });
+
+/* ------------------------------------------------------------------
+   Scroll helpers — every in-page jump goes through the same easing
+------------------------------------------------------------------ */
+const headerOffset = () => -((header?.offsetHeight ?? 0) + 10);
+
+function maxScroll() {
+  return Math.max(
+    document.documentElement.scrollHeight - window.innerHeight,
+    0,
+  );
+}
+
+/** True for elements that own their own key handling (links, inputs, buttons…). */
+function isInteractive(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    target.closest(
+      'a, button, input, textarea, select, summary, [role="button"], [contenteditable]',
+    ) !== null
+  );
+}
+
+function scrollToY(top: number, duration = 1.15, immediate = false) {
+  const destination = Math.min(Math.max(top, 0), maxScroll());
+
+  if (lenis) {
+    lenis.scrollTo(destination, immediate ? { immediate: true } : { duration });
+  } else {
+    window.scrollTo({
+      top: destination,
+      behavior: immediate || prefersReducedMotion ? "auto" : "smooth",
+    });
+  }
+}
+
+function scrollToElement(target: Element, duration = 1.15, immediate = false) {
+  const top =
+    target.getBoundingClientRect().top + window.scrollY + headerOffset();
+  scrollToY(top, duration, immediate);
+}
 
 /* ------------------------------------------------------------------
    Anchor navigation (keeps the header height out of the way)
@@ -166,20 +219,85 @@ document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((link) => {
 
     event.preventDefault();
     setMenu(false);
-
-    const offset = -((header?.offsetHeight ?? 0) + 10);
-    if (lenis) {
-      lenis.scrollTo(target, { offset, duration: 1.15 });
-    } else {
-      const top = target.getBoundingClientRect().top + window.scrollY + offset;
-      window.scrollTo({ top, behavior: prefersReducedMotion ? "auto" : "smooth" });
-    }
+    scrollToElement(target);
 
     if (window.location.hash !== href) {
       history.replaceState(null, "", href);
     }
   });
 });
+
+/* ------------------------------------------------------------------
+   Keyboard scrolling — same easing as the wheel and anchor clicks
+------------------------------------------------------------------ */
+document.addEventListener("keydown", (event) => {
+  if (prefersReducedMotion || event.defaultPrevented) return;
+  if (event.metaKey || event.ctrlKey || event.altKey) return;
+  if (isInteractive(event.target)) return;
+  if (menu?.classList.contains("is-open")) return;
+
+  const page = window.innerHeight * 0.88;
+  const step = 120;
+  let destination: number;
+
+  switch (event.key) {
+    case "PageDown":
+      destination = window.scrollY + page;
+      break;
+    case "PageUp":
+      destination = window.scrollY - page;
+      break;
+    case " ":
+      destination = window.scrollY + (event.shiftKey ? -page : page);
+      break;
+    case "Home":
+      destination = 0;
+      break;
+    case "End":
+      destination = maxScroll();
+      break;
+    case "ArrowDown":
+      destination = window.scrollY + step;
+      break;
+    case "ArrowUp":
+      destination = window.scrollY - step;
+      break;
+    default:
+      return;
+  }
+
+  event.preventDefault();
+  scrollToY(destination, 0.85);
+});
+
+/* ------------------------------------------------------------------
+   Deep links (/ #work) — land below the header, ease on hash change
+------------------------------------------------------------------ */
+function scrollToHash(hash: string, immediate = false) {
+  if (hash.length < 2) return;
+
+  let target: HTMLElement | null = null;
+  try {
+    target = document.querySelector<HTMLElement>(hash);
+  } catch {
+    return; /* not a valid selector — leave the browser default alone */
+  }
+  if (!target) return;
+
+  scrollToElement(target, 1.15, immediate);
+}
+
+if (window.location.hash) {
+  // The browser has already jumped to the raw anchor; correct for the fixed header.
+  scrollToHash(window.location.hash, true);
+  window.addEventListener(
+    "load",
+    () => scrollToHash(window.location.hash, true),
+    { once: true },
+  );
+}
+
+window.addEventListener("hashchange", () => scrollToHash(window.location.hash));
 
 /* ------------------------------------------------------------------
    Hero entrance + chart draw
@@ -209,7 +327,11 @@ if (prefersReducedMotion) {
   const intro = gsap.timeline({ defaults: { ease: "expo.out" } });
   intro
     .to(heroLines, { yPercent: 0, duration: 1.15, stagger: 0.09 }, 0.15)
-    .to(heroLine, { strokeDashoffset: 0, duration: 2.4, ease: "power2.inOut" }, 0.45)
+    .to(
+      heroLine,
+      { strokeDashoffset: 0, duration: 2.4, ease: "power2.inOut" },
+      0.45,
+    )
     .to(heroArea, { opacity: 1, duration: 1.6 }, 1.15);
 }
 
@@ -278,9 +400,13 @@ document.querySelectorAll<HTMLElement>("[data-count]").forEach((el) => {
 /* ------------------------------------------------------------------
    Project search + filters
 ------------------------------------------------------------------ */
-const projectRows = Array.from(document.querySelectorAll<HTMLElement>("[data-project]"));
+const projectRows = Array.from(
+  document.querySelectorAll<HTMLElement>("[data-project]"),
+);
 const searchInput = document.querySelector<HTMLInputElement>("#project-search");
-const filterChips = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-filter]"));
+const filterChips = Array.from(
+  document.querySelectorAll<HTMLButtonElement>("[data-filter]"),
+);
 const countOutput = document.querySelector<HTMLElement>("[data-project-count]");
 const emptyState = document.querySelector<HTMLElement>("[data-project-empty]");
 
@@ -293,14 +419,16 @@ function applyProjectFilters(animate = false) {
   projectRows.forEach((row) => {
     const tech = (row.dataset.tech ?? "").split("|");
     const matchesFilter = activeFilter === "All" || tech.includes(activeFilter);
-    const matchesQuery = query === "" || (row.textContent ?? "").toLowerCase().includes(query);
+    const matchesQuery =
+      query === "" || (row.textContent ?? "").toLowerCase().includes(query);
     const show = matchesFilter && matchesQuery;
 
     row.hidden = !show;
     if (show) visible.push(row);
   });
 
-  if (countOutput) countOutput.textContent = String(visible.length).padStart(2, "0");
+  if (countOutput)
+    countOutput.textContent = String(visible.length).padStart(2, "0");
   if (emptyState) emptyState.hidden = visible.length > 0;
 
   if (animate && !prefersReducedMotion && visible.length > 0) {
@@ -336,13 +464,22 @@ filterChips.forEach((chip) => {
 applyProjectFilters();
 
 /* ------------------------------------------------------------------
-   Back to top
+   Back to top — a visible glide; longer distance gets more time
 ------------------------------------------------------------------ */
+const easeInOutCubic = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
 backToTop?.addEventListener("click", () => {
+  const distance = window.scrollY;
+  const duration = distance > 4000 ? 1.9 : distance > 1200 ? 1.4 : 0.9;
+
   if (lenis) {
-    lenis.scrollTo(0, { duration: 1.1 });
+    lenis.scrollTo(0, { duration, easing: easeInOutCubic });
   } else {
-    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+    });
   }
 });
 
