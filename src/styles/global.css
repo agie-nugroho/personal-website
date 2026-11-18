@@ -108,7 +108,7 @@
   }
 
   .section-y {
-    @apply py-14 md:py-20 lg:py-24;
+    @apply py-14 md:py-5 lg:py-5;
   }
 
   .eyebrow {
