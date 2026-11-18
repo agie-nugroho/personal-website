@@ -1,3 +1,5 @@
+import { withBase } from "../lib/paths";
+
 export const site = {
   name: "Agie Nugroho",
   firstName: "Agie",
@@ -10,7 +12,7 @@ export const site = {
   github: "https://github.com/agie-nugroho",
   linkedin: "https://www.linkedin.com/in/agie-nugroho/",
   /** Drop the original CV here to replace the generated copy in public/. */
-  cv: "/cv/agie-nugroho-cv.pdf",
+  cv: withBase("/cv/agie-nugroho-cv.pdf"),
   availability: "Open to data analyst roles",
   description:
     "Agie Nugroho is a Data Analyst and Mathematics graduate from Universitas Jenderal Soedirman working with SQL, Python, Power BI, Tableau and Excel to turn raw data into decisions.",

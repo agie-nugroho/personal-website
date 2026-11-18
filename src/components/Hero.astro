@@ -67,9 +67,11 @@ const meta = [
           </span>
           Portfolio — 2026
         </p>
-        <p class="eyebrow hidden items-center gap-2 sm:flex">
+        <p class="eyebrow flex flex-wrap items-center justify-end gap-x-2 gap-y-1">
           <Icon name="map-pin" size={12} />
           {site.location}
+          <span class="text-line-strong" aria-hidden="true">·</span>
+          <span data-local-time>—</span>
         </p>
       </div>
 
@@ -99,11 +101,11 @@ const meta = [
         </p>
 
         <div class="flex flex-wrap items-center gap-x-6 gap-y-3 md:justify-end" data-reveal>
-          <a href={site.cv} download class="btn btn-solid">
+          <a href={site.cv} download class="btn btn-solid" data-magnetic>
             <Icon name="download" size={15} />
             Download CV
           </a>
-          <a href="#work" class="btn btn-outline">
+          <a href="#work" class="btn btn-outline" data-magnetic>
             View selected work
             <Icon name="arrow-down" size={15} />
           </a>

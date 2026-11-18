@@ -99,6 +99,7 @@ gsap.ticker.lagSmoothing(0);
 const header = document.getElementById("site-header");
 const progressBar = document.getElementById("scroll-progress");
 const backToTop = document.querySelector<HTMLButtonElement>("#back-to-top");
+const topRing = document.querySelector<SVGCircleElement>("[data-top-ring]");
 const navLinks = Array.from(
   document.querySelectorAll<HTMLAnchorElement>("[data-nav-link]"),
 );
@@ -115,10 +116,9 @@ function onScroll() {
 
   header?.classList.toggle("is-scrolled", scrollY > 8);
 
-  if (progressBar) {
-    const ratio = scrollable > 0 ? Math.min(scrollY / scrollable, 1) : 0;
-    progressBar.style.transform = `scaleX(${ratio})`;
-  }
+  const ratio = scrollable > 0 ? Math.min(scrollY / scrollable, 1) : 0;
+  if (progressBar) progressBar.style.transform = `scaleX(${ratio})`;
+  if (topRing) topRing.style.strokeDashoffset = String(1 - ratio);
 
   const showBackToTop = scrollY > 640;
   if (backToTop) {
@@ -603,25 +603,30 @@ if (heroSection && heroChart && heroPolyline && heroCursor) {
 /* ------------------------------------------------------------------
    Experience timeline — the rail fills as the section is read
 ------------------------------------------------------------------ */
+
+const timeline = document.querySelector<HTMLElement>(".experience-timeline");
+
 const timelineFill = document.querySelector<HTMLElement>(
   "[data-timeline-fill]",
 );
 
-if (timelineFill && !prefersReducedMotion) {
-  gsap.fromTo(
-    timelineFill,
-    { scaleY: 0 },
-    {
-      scaleY: 1,
-      ease: "none",
-      scrollTrigger: {
-        trigger: timelineFill.parentElement,
-        start: "top 70%",
-        end: "bottom 70%",
-        scrub: 0.4,
-      },
+if (timeline && timelineFill) {
+  gsap.set(timelineFill, {
+    scaleY: 0,
+    transformOrigin: "top center",
+  });
+
+  gsap.to(timelineFill, {
+    scaleY: 1,
+    ease: "none",
+    scrollTrigger: {
+      trigger: timeline,
+      start: "top 75%",
+      end: "bottom 65%",
+      scrub: 0.8,
+      invalidateOnRefresh: true,
     },
-  );
+  });
 }
 
 /* ------------------------------------------------------------------
@@ -686,6 +691,93 @@ if (projectPreview && canHover) {
 }
 
 /* ------------------------------------------------------------------
+   Project rows — a soft spotlight that follows the pointer
+------------------------------------------------------------------ */
+if (canHover) {
+  document.querySelectorAll<HTMLElement>("[data-project]").forEach((row) => {
+    row.addEventListener("pointermove", (event) => {
+      const rect = row.getBoundingClientRect();
+      row.style.setProperty("--mx", `${event.clientX - rect.left}px`);
+      row.style.setProperty("--my", `${event.clientY - rect.top}px`);
+    });
+  });
+}
+
+/* ------------------------------------------------------------------
+   Magnetic buttons — lean toward the cursor, spring back on leave
+------------------------------------------------------------------ */
+if (canHover && !prefersReducedMotion) {
+  const clampPull = gsap.utils.clamp(-10, 10);
+
+  document
+    .querySelectorAll<HTMLElement>("[data-magnetic]")
+    .forEach((element) => {
+      const xTo = gsap.quickTo(element, "x", { duration: 0.5, ease: "power3" });
+      const yTo = gsap.quickTo(element, "y", { duration: 0.5, ease: "power3" });
+
+      element.addEventListener("pointermove", (event) => {
+        const rect = element.getBoundingClientRect();
+        const pull = 0.22;
+        xTo(clampPull((event.clientX - (rect.left + rect.width / 2)) * pull));
+        yTo(clampPull((event.clientY - (rect.top + rect.height / 2)) * pull));
+      });
+
+      element.addEventListener("pointerleave", () => {
+        xTo(0);
+        yTo(0);
+      });
+    });
+}
+
+/* ------------------------------------------------------------------
+   Marquee — shear with the scroll, settle when it stops
+------------------------------------------------------------------ */
+const marqueeShear = document.querySelector<HTMLElement>(
+  "[data-marquee-shear]",
+);
+
+if (marqueeShear && !prefersReducedMotion) {
+  const setShear = gsap.quickTo(marqueeShear, "skewX", {
+    duration: 0.7,
+    ease: "power3",
+  });
+  const clampShear = gsap.utils.clamp(-7, 7);
+  let lastY = window.scrollY;
+  let shearTimer: number | undefined;
+  let shearTicking = false;
+
+  const updateShear = () => {
+    const y = window.scrollY;
+    const delta = y - lastY;
+    lastY = y;
+
+    // Distance travelled per frame, not Lenis's internal velocity units.
+    if (Math.abs(delta) > 0.5) setShear(clampShear(delta * 0.4));
+
+    window.clearTimeout(shearTimer);
+    shearTimer = window.setTimeout(() => {
+      gsap.to(marqueeShear, {
+        skewX: 0,
+        duration: 0.6,
+        ease: "power2.out",
+        overwrite: true,
+      });
+    }, 180);
+    shearTicking = false;
+  };
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (shearTicking) return;
+      shearTicking = true;
+      requestAnimationFrame(updateShear);
+    },
+    { passive: true },
+  );
+}
+
+/* ------------------------------------------------------------------
    Copy email + toast
 ------------------------------------------------------------------ */
 const toast = document.getElementById("toast");
@@ -740,6 +832,18 @@ document.addEventListener("click", async (event) => {
 
   const copied = await copyText(email);
   showToast(copied ? "Email copied" : email);
+});
+
+document.addEventListener("click", async (event) => {
+  const trigger =
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>("[data-copy-link]")
+      : null;
+  if (!trigger) return;
+
+  const url = window.location.href;
+  const copied = await copyText(url);
+  showToast(copied ? "Link copied" : url);
 });
 
 /* ------------------------------------------------------------------
@@ -800,6 +904,28 @@ function paletteItems(): PaletteItem[] {
   const cvLink = document.querySelector<HTMLAnchorElement>("a[download]");
   const cvHref = cvLink?.getAttribute("href");
   if (cvHref) items.push({ label: "Download CV", hint: "PDF", href: cvHref });
+
+  items.push({
+    label: root.classList.contains("dark")
+      ? "Switch to light theme"
+      : "Switch to dark theme",
+    hint: "Action",
+    run: applyTheme,
+  });
+
+  if (mailHref) {
+    const email = mailHref.replace(/^mailto:/, "");
+    items.push({
+      label: "Copy email address",
+      hint: "Action",
+      run: async () => {
+        const copied = await copyText(email);
+        showToast(copied ? "Email copied" : email);
+      },
+    });
+  }
+
+  items.push({ label: "Back to top", hint: "Action", run: () => scrollToY(0) });
 
   return items;
 }
@@ -934,6 +1060,82 @@ document.addEventListener("keydown", (event) => {
     runPaletteItem(paletteMatches[paletteIndex]);
   }
 });
+
+/* ------------------------------------------------------------------
+   Case study — highlight the section currently being read
+------------------------------------------------------------------ */
+const spyLinks = Array.from(
+  document.querySelectorAll<HTMLAnchorElement>("[data-spy-link]"),
+);
+const spyTargets = Array.from(
+  document.querySelectorAll<HTMLElement>("[data-spy-target]"),
+);
+
+if (spyLinks.length > 0 && spyTargets.length > 0) {
+  const setSpy = (id: string) => {
+    spyLinks.forEach((link) => {
+      const isActive = link.dataset.spyLink === id;
+      link.classList.toggle("is-active", isActive);
+      if (isActive) link.setAttribute("aria-current", "true");
+      else link.removeAttribute("aria-current");
+    });
+  };
+
+  // Position-based rather than IntersectionObserver: short sections (the last
+  // one especially) would otherwise never enter a narrow band.
+  const updateSpy = () => {
+    const marker = window.scrollY + window.innerHeight * 0.35;
+    let active = spyTargets[0]?.id ?? "";
+
+    for (const target of spyTargets) {
+      if (target.getBoundingClientRect().top + window.scrollY <= marker)
+        active = target.id;
+    }
+
+    setSpy(active);
+  };
+
+  let spyTicking = false;
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (spyTicking) return;
+      spyTicking = true;
+      requestAnimationFrame(() => {
+        updateSpy();
+        spyTicking = false;
+      });
+    },
+    { passive: true },
+  );
+
+  updateSpy();
+}
+
+/* ------------------------------------------------------------------
+   Local time in Bekasi — real clock, updated quietly
+------------------------------------------------------------------ */
+const localTime = document.querySelector<HTMLElement>("[data-local-time]");
+
+if (localTime) {
+  try {
+    const clock = new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jakarta",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const tick = () => {
+      localTime.textContent = `${clock.format(new Date())} WIB`;
+    };
+
+    tick();
+    window.setInterval(tick, 15000);
+  } catch {
+    localTime.textContent = "WIB";
+  }
+}
 
 /* Cross-document view transitions land here too: refresh the scroll state. */
 window.addEventListener("pageshow", () => {
