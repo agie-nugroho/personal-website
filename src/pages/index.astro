@@ -8,9 +8,23 @@ import Experience from "../components/Experience.astro";
 import Projects from "../components/Projects.astro";
 import Certifications from "../components/Certifications.astro";
 import Contact from "../components/Contact.astro";
+import { nav } from "../data/site";
 ---
 
 <BaseLayout>
+  <nav class="section-dots" aria-label="Section navigation">
+    <ul>
+      {
+        nav.map((item) => (
+          <li>
+            <a href={`#${item.id}`} data-dot-link={item.id}>
+              <span>{item.label}</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </nav>
   <Hero />
   <Marquee />
   <About />

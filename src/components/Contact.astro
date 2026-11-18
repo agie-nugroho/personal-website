@@ -48,6 +48,14 @@ import { site } from "../data/site";
               <Icon name="mail" size={14} />
               Write an email
             </a>
+            <button
+              type="button"
+              class="btn btn-outline"
+              data-copy-email={site.email}
+              aria-label={`Copy email address ${site.email}`}
+            >
+              Copy email
+            </button>
             <a href={site.cv} download class="btn btn-outline">
               <Icon name="download" size={14} />
               Download CV

@@ -1,0 +1,205 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Icon from "../../components/Icon.astro";
+import { projects } from "../../data/projects";
+import type { Project } from "../../data/projects";
+
+export function getStaticPaths() {
+  return projects.map((project) => ({
+    params: { slug: project.slug },
+    props: { project },
+  }));
+}
+
+interface Props {
+  project: Project;
+}
+
+const { project } = Astro.props;
+const position = projects.findIndex((item) => item.slug === project.slug);
+const previous = position > 0 ? projects[position - 1] : undefined;
+const next = position < projects.length - 1 ? projects[position + 1] : undefined;
+
+const sections = [
+  { id: "problem", label: "The problem", body: project.problem },
+  { id: "approach", label: "The approach", body: project.approach },
+  { id: "insight", label: "What it showed", body: project.insight },
+];
+---
+
+<BaseLayout title={`${project.title} — ${project.index}`} description={project.summary}>
+  <article class="pb-6 pt-[116px] md:pt-[148px]">
+    <div class="shell">
+      <a
+        href="/#work"
+        class="inline-flex items-center gap-2 font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted transition-colors hover:text-ink"
+      >
+        <Icon name="arrow-up-right" size={12} class="rotate-[225deg]" />
+        Selected work
+      </a>
+
+      <p class="eyebrow mt-8 flex items-center gap-3">
+        <span class="h-px w-6 bg-line-strong" aria-hidden="true"></span>
+        {project.index} — Case study
+      </p>
+
+      <h1
+        class="mt-4 max-w-[20ch] font-display text-[clamp(2.4rem,6vw,4.4rem)] leading-[0.98] tracking-[-0.02em]"
+      >
+        {project.title}
+      </h1>
+
+      <p class="mt-6 max-w-2xl text-[15px] leading-relaxed text-ink-soft">
+        {project.summary}
+      </p>
+
+      <dl
+        class="mt-10 grid grid-cols-2 gap-x-6 gap-y-6 border-t border-line pt-7 sm:grid-cols-4"
+      >
+        <div class="flex flex-col gap-1.5">
+          <dt class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted">Year</dt>
+          <dd class="text-[13.5px] text-ink">{project.year}</dd>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <dt class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted">Role</dt>
+          <dd class="text-[13.5px] text-ink">Data analysis</dd>
+        </div>
+        <div class="col-span-2 flex flex-col gap-1.5">
+          <dt class="font-mono text-[9.5px] uppercase tracking-[0.18em] text-muted">Tools</dt>
+          <dd class="text-[13.5px] text-ink">{project.tools.join(" · ")}</dd>
+        </div>
+      </dl>
+
+      {
+        project.links.length > 0 && (
+          <div class="mt-8 flex flex-wrap gap-2">
+            {project.links.map((link) => (
+              <a
+                href={link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 rounded-full border border-line-strong px-4 py-2 font-mono text-[9.5px] uppercase tracking-[0.1em] text-ink transition-colors duration-300 hover:border-ink hover:bg-ink hover:text-paper"
+              >
+                <Icon name={link.kind === "code" ? "github" : "external-link"} size={12} />
+                {link.label}
+              </a>
+            ))}
+          </div>
+        )
+      }
+    </div>
+
+    <div
+      class="shell mt-14 grid gap-12 border-t border-line pt-10 md:mt-20 md:pt-14 lg:grid-cols-[210px_minmax(0,1fr)] lg:gap-20"
+    >
+      <nav aria-label="Sections" class="hidden lg:block">
+        <ul class="sticky top-28 space-y-3">
+          {
+            sections.map((section) => (
+              <li>
+                <a
+                  href={`#${section.id}`}
+                  class="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted transition-colors hover:text-ink"
+                >
+                  {section.label}
+                </a>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+
+      <div class="space-y-14 md:space-y-20">
+        {
+          sections.map((section) => (
+            <section id={section.id} class="scroll-mt-28" data-reveal>
+              <h2 class="font-display text-[clamp(1.6rem,3.4vw,2.4rem)] leading-[1.1] tracking-[-0.015em]">
+                {section.label}
+              </h2>
+              <p class="mt-4 max-w-2xl text-[14.5px] leading-relaxed text-ink-soft md:text-[15px]">
+                {section.body}
+              </p>
+            </section>
+          ))
+        }
+
+        <section class="border-t border-line pt-8" data-reveal>
+          <p class="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted">Stack</p>
+          <ul class="mt-4 flex flex-wrap gap-2">
+            {
+              project.tools.map((tool) => (
+                <li class="rounded-full border border-line px-3.5 py-1.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-ink-soft">
+                  {tool}
+                </li>
+              ))
+            }
+          </ul>
+        </section>
+      </div>
+    </div>
+
+    <div class="shell mt-16 md:mt-24">
+      <div class="flex flex-col gap-6 border-t border-line pt-8 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p class="eyebrow">Next step</p>
+          <p class="mt-2 max-w-md font-display text-[clamp(1.3rem,2.6vw,1.8rem)] leading-tight">
+            Want the query, the file or the dashboard behind this?
+          </p>
+        </div>
+        <a href="/#contact" class="btn btn-solid self-start md:self-auto">
+          Let's talk
+          <Icon name="arrow-up-right" size={14} />
+        </a>
+      </div>
+    </div>
+
+    <nav aria-label="More case studies" class="shell mt-14 md:mt-20">
+      <div class="grid gap-px overflow-hidden rounded-sm border border-line bg-line sm:grid-cols-2">
+        {
+          previous ? (
+            <a
+              href={`/work/${previous.slug}/`}
+              class="group flex flex-col gap-2 bg-paper p-6 transition-colors duration-500 hover:bg-raise md:p-7"
+            >
+              <span class="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted">
+                ← Previous
+              </span>
+              <span class="font-display text-[clamp(1.15rem,2.2vw,1.5rem)] leading-tight transition-colors group-hover:text-accent">
+                {previous.title}
+              </span>
+            </a>
+          ) : (
+            <span class="hidden bg-paper sm:block" aria-hidden="true"></span>
+          )
+        }
+        {
+          next ? (
+            <a
+              href={`/work/${next.slug}/`}
+              class="group flex flex-col items-end gap-2 bg-paper p-6 text-right transition-colors duration-500 hover:bg-raise md:p-7"
+            >
+              <span class="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted">
+                Next →
+              </span>
+              <span class="font-display text-[clamp(1.15rem,2.2vw,1.5rem)] leading-tight transition-colors group-hover:text-accent">
+                {next.title}
+              </span>
+            </a>
+          ) : (
+            <a
+              href="/#work"
+              class="group flex flex-col items-end gap-2 bg-paper p-6 text-right transition-colors duration-500 hover:bg-raise md:p-7"
+            >
+              <span class="font-mono text-[9.5px] uppercase tracking-[0.16em] text-muted">
+                Back to
+              </span>
+              <span class="font-display text-[clamp(1.15rem,2.2vw,1.5rem)] leading-tight transition-colors group-hover:text-accent">
+                All projects
+              </span>
+            </a>
+          )
+        }
+      </div>
+    </nav>
+  </article>
+</BaseLayout>

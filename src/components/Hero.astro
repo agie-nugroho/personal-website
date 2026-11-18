@@ -5,7 +5,7 @@ import { site } from "../data/site";
 const meta = [
   { label: "Based in", value: "Bekasi, Indonesia" },
   { label: "Education", value: "S.Mat. ( Mathematics )" },
-  { label: "Focus", value: "Data Analytics" },
+  { label: "Focus", value: "Analytics & BI" },
   { label: "Availability", value: "Open to opportunities" },
 ];
 ---
@@ -18,6 +18,7 @@ const meta = [
   <div class="hairline-grid pointer-events-none absolute inset-0" aria-hidden="true"></div>
 
   <svg
+    data-hero-chart
     class="pointer-events-none absolute bottom-0 left-0 h-[46%] w-full text-accent opacity-40"
     viewBox="0 0 1200 300"
     preserveAspectRatio="none"
@@ -42,6 +43,18 @@ const meta = [
       stroke-width="1.5"
       stroke-linecap="round"
       stroke-linejoin="round"></polyline>
+    <g id="hero-cursor" opacity="0">
+      <line
+        id="hero-guide"
+        y1="0"
+        y2="300"
+        stroke="currentColor"
+        stroke-width="1"
+        stroke-dasharray="3 6"
+        opacity="0.5"></line>
+      <circle id="hero-halo" r="10" fill="currentColor" opacity="0.16"></circle>
+      <circle id="hero-dot" r="3.5" fill="currentColor"></circle>
+    </g>
   </svg>
 
   <div class="shell relative z-10">
@@ -62,7 +75,7 @@ const meta = [
 
       <div>
         <p class="mb-5 max-w-md text-[13.5px] leading-relaxed text-muted" data-reveal>
-          Hi, I'm Agie Nugroho, data analyst with a mathematician's habit of
+          Hi, I'm Agie Nugroho — a data analyst with a mathematician's habit of
           checking the assumptions first.
         </p>
 
@@ -81,7 +94,7 @@ const meta = [
       <div class="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-end md:gap-16">
         <p class="max-w-xl text-[14.5px] leading-relaxed text-ink-soft md:text-[15.5px]" data-reveal>
           Mathematics graduate from Universitas Jenderal Soedirman, focused on
-          analytics, business intelligence and visualisation, helping teams read
+          analytics, business intelligence and visualisation — helping teams read
           their numbers clearly and act on them with confidence.
         </p>
 

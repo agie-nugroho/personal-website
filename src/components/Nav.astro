@@ -38,6 +38,16 @@ import { nav, site } from "../data/site";
 
     <div class="flex items-center gap-2">
       <button
+        id="palette-trigger"
+        type="button"
+        class="hidden h-10 items-center gap-1.5 rounded-full border border-line px-3 font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted transition-colors hover:border-line-strong hover:text-ink md:inline-flex"
+        aria-label="Open the jump-to menu"
+        aria-keyshortcuts="Meta+K Control+K"
+      >
+        Jump to
+        <span class="rounded border border-line px-1 py-0.5 text-[9px]">⌘K</span>
+      </button>
+      <button
         id="theme-toggle"
         type="button"
         class="flex h-10 w-10 items-center justify-center rounded-full border border-line text-ink transition-colors duration-300 hover:border-line-strong hover:bg-raise"

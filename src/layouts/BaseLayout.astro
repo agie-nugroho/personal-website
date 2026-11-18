@@ -114,6 +114,28 @@ const personSchema = {
 
     <Footer />
 
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    <div id="palette" class="palette" hidden aria-hidden="true">
+      <div
+        class="palette-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Jump to a section or project"
+      >
+        <label for="palette-input" class="sr-only">Jump to a section or project</label>
+        <input
+          id="palette-input"
+          type="text"
+          placeholder="Jump to a section or project…"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <ul id="palette-list" aria-label="Results"></ul>
+        <p class="palette-foot">↑ ↓ pilih · Enter buka · Esc tutup</p>
+      </div>
+    </div>
+
     <button
       id="back-to-top"
       type="button"

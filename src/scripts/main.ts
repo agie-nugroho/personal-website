@@ -23,7 +23,7 @@ function syncThemeState() {
   );
 }
 
-themeToggle?.addEventListener("click", () => {
+function applyTheme() {
   const isDark = !root.classList.contains("dark");
   root.classList.toggle("dark", isDark);
   try {
@@ -32,6 +32,40 @@ themeToggle?.addEventListener("click", () => {
     /* private mode: theme just won't persist */
   }
   syncThemeState();
+}
+
+type ViewTransitionDocument = Document & {
+  startViewTransition?: (callback: () => void) => { finished: Promise<void> };
+};
+
+/** Reveal the new theme with a circle growing out of the toggle itself. */
+themeToggle?.addEventListener("click", () => {
+  const startViewTransition = (
+    document as ViewTransitionDocument
+  ).startViewTransition?.bind(document);
+  const rect = themeToggle?.getBoundingClientRect();
+
+  if (prefersReducedMotion || !startViewTransition || !rect) {
+    applyTheme();
+    return;
+  }
+
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+  root.style.setProperty("--vt-x", `${x}px`);
+  root.style.setProperty("--vt-y", `${y}px`);
+  root.style.setProperty(
+    "--vt-r",
+    `${Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y))}px`,
+  );
+
+  startViewTransition(() => applyTheme())
+    .finished.catch(() => {})
+    .finally(() => {
+      root.style.removeProperty("--vt-x");
+      root.style.removeProperty("--vt-y");
+      root.style.removeProperty("--vt-r");
+    });
 });
 
 syncThemeState();
@@ -68,6 +102,9 @@ const backToTop = document.querySelector<HTMLButtonElement>("#back-to-top");
 const navLinks = Array.from(
   document.querySelectorAll<HTMLAnchorElement>("[data-nav-link]"),
 );
+const sectionDots = Array.from(
+  document.querySelectorAll<HTMLAnchorElement>("[data-dot-link]"),
+);
 const sections = Array.from(
   document.querySelectorAll<HTMLElement>("[data-section]"),
 );
@@ -102,6 +139,13 @@ function onScroll() {
     link.classList.toggle("is-active", isActive);
     if (isActive) link.setAttribute("aria-current", "true");
     else link.removeAttribute("aria-current");
+  });
+
+  sectionDots.forEach((dot) => {
+    const isActive = dot.dataset.dotLink === activeId;
+    dot.classList.toggle("is-active", isActive);
+    if (isActive) dot.setAttribute("aria-current", "true");
+    else dot.removeAttribute("aria-current");
   });
 }
 
@@ -195,7 +239,7 @@ function scrollToY(top: number, duration = 1.15, immediate = false) {
   } else {
     window.scrollTo({
       top: destination,
-      behavior: immediate || prefersReducedMotion ? "auto" : "smooth",
+      behavior: immediate ? "auto" : "smooth",
     });
   }
 }
@@ -235,6 +279,10 @@ document.addEventListener("keydown", (event) => {
   if (event.metaKey || event.ctrlKey || event.altKey) return;
   if (isInteractive(event.target)) return;
   if (menu?.classList.contains("is-open")) return;
+  if (
+    document.getElementById("palette")?.getAttribute("aria-hidden") === "false"
+  )
+    return;
 
   const page = window.innerHeight * 0.88;
   const step = 120;
@@ -476,10 +524,9 @@ backToTop?.addEventListener("click", () => {
   if (lenis) {
     lenis.scrollTo(0, { duration, easing: easeInOutCubic });
   } else {
-    window.scrollTo({
-      top: 0,
-      behavior: prefersReducedMotion ? "auto" : "smooth",
-    });
+    // No Lenis (script failed or vendor blocked): native smooth is still better
+    // than a jump, and this only runs on an explicit click.
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 });
 
@@ -490,3 +537,406 @@ if (document.fonts?.ready) {
   document.fonts.ready.then(() => ScrollTrigger.refresh()).catch(() => {});
 }
 window.addEventListener("load", () => ScrollTrigger.refresh(), { once: true });
+
+/* ------------------------------------------------------------------
+   Hero chart — pointer guide and a gentle parallax
+------------------------------------------------------------------ */
+const heroSection = document.getElementById("home");
+const heroChart = document.querySelector<SVGSVGElement>("[data-hero-chart]");
+const heroPolyline = document.getElementById(
+  "hero-line",
+) as SVGPolylineElement | null;
+const heroCursor = document.getElementById("hero-cursor");
+const heroGuide = document.getElementById(
+  "hero-guide",
+) as SVGLineElement | null;
+const heroDot = document.getElementById("hero-dot") as SVGCircleElement | null;
+const heroHalo = document.getElementById(
+  "hero-halo",
+) as SVGCircleElement | null;
+
+if (heroSection && heroChart && heroPolyline && heroCursor) {
+  const points = Array.from(
+    { length: heroPolyline.points.numberOfItems },
+    (_, i) => heroPolyline.points.getItem(i),
+  );
+
+  const parallaxX = prefersReducedMotion
+    ? null
+    : gsap.quickTo(heroChart, "x", { duration: 0.9, ease: "power3" });
+  const parallaxY = prefersReducedMotion
+    ? null
+    : gsap.quickTo(heroChart, "y", { duration: 0.9, ease: "power3" });
+
+  heroSection.addEventListener("pointermove", (event) => {
+    const rect = heroSection.getBoundingClientRect();
+    if (rect.width === 0 || points.length === 0) return;
+
+    // Map the pointer onto the chart's 1200-unit viewBox width.
+    const chartX = ((event.clientX - rect.left) / rect.width) * 1200;
+    let nearest = points[0];
+    for (const point of points) {
+      if (Math.abs(point.x - chartX) < Math.abs(nearest.x - chartX))
+        nearest = point;
+    }
+
+    heroGuide?.setAttribute("x1", String(nearest.x));
+    heroGuide?.setAttribute("x2", String(nearest.x));
+    heroDot?.setAttribute("cx", String(nearest.x));
+    heroDot?.setAttribute("cy", String(nearest.y));
+    heroHalo?.setAttribute("cx", String(nearest.x));
+    heroHalo?.setAttribute("cy", String(nearest.y));
+
+    gsap.to(heroCursor, { opacity: 1, duration: 0.3, overwrite: true });
+
+    parallaxX?.((event.clientX / window.innerWidth - 0.5) * 18);
+    parallaxY?.((event.clientY / window.innerHeight - 0.5) * 10);
+  });
+
+  heroSection.addEventListener("pointerleave", () => {
+    gsap.to(heroCursor, { opacity: 0, duration: 0.35, overwrite: true });
+    parallaxX?.(0);
+    parallaxY?.(0);
+  });
+}
+
+/* ------------------------------------------------------------------
+   Experience timeline — the rail fills as the section is read
+------------------------------------------------------------------ */
+const timelineFill = document.querySelector<HTMLElement>(
+  "[data-timeline-fill]",
+);
+
+if (timelineFill && !prefersReducedMotion) {
+  gsap.fromTo(
+    timelineFill,
+    { scaleY: 0 },
+    {
+      scaleY: 1,
+      ease: "none",
+      scrollTrigger: {
+        trigger: timelineFill.parentElement,
+        start: "top 70%",
+        end: "bottom 70%",
+        scrub: 0.4,
+      },
+    },
+  );
+}
+
+/* ------------------------------------------------------------------
+   Project hover preview (pointer devices only)
+------------------------------------------------------------------ */
+const projectPreview = document.getElementById("project-preview");
+const canHover = window.matchMedia(
+  "(hover: hover) and (pointer: fine)",
+).matches;
+
+if (projectPreview && canHover) {
+  const fields = {
+    meta: projectPreview.querySelector<HTMLElement>("[data-pv-meta]"),
+    title: projectPreview.querySelector<HTMLElement>("[data-pv-title]"),
+    summary: projectPreview.querySelector<HTMLElement>("[data-pv-summary]"),
+    tools: projectPreview.querySelector<HTMLElement>("[data-pv-tools]"),
+  };
+
+  let previewVisible = false;
+
+  const placePreview = (event: PointerEvent) => {
+    if (!projectPreview) return;
+    const gap = 18;
+    const box = projectPreview.getBoundingClientRect();
+    let x = event.clientX + gap;
+    let y = event.clientY + gap;
+
+    if (x + box.width > window.innerWidth - 12)
+      x = event.clientX - box.width - gap;
+    if (y + box.height > window.innerHeight - 12)
+      y = event.clientY - box.height - gap;
+
+    projectPreview.style.transform = `translate3d(${Math.round(Math.max(8, x))}px, ${Math.round(
+      Math.max(8, y),
+    )}px, 0)`;
+  };
+
+  document.querySelectorAll<HTMLElement>("[data-project]").forEach((row) => {
+    row.addEventListener("pointerenter", (event) => {
+      if (fields.meta) fields.meta.textContent = row.dataset.previewMeta ?? "";
+      if (fields.title)
+        fields.title.textContent = row.dataset.previewTitle ?? "";
+      if (fields.summary)
+        fields.summary.textContent = row.dataset.previewSummary ?? "";
+      if (fields.tools)
+        fields.tools.textContent = row.dataset.previewTools ?? "";
+
+      previewVisible = true;
+      projectPreview.classList.add("is-visible");
+      placePreview(event);
+    });
+
+    row.addEventListener("pointermove", (event) => {
+      if (previewVisible) placePreview(event);
+    });
+
+    row.addEventListener("pointerleave", () => {
+      previewVisible = false;
+      projectPreview.classList.remove("is-visible");
+    });
+  });
+}
+
+/* ------------------------------------------------------------------
+   Copy email + toast
+------------------------------------------------------------------ */
+const toast = document.getElementById("toast");
+let toastTimer: number | undefined;
+
+function showToast(message: string) {
+  if (!toast) return;
+  toast.textContent = message;
+  toast.classList.add("is-visible");
+  window.clearTimeout(toastTimer);
+  toastTimer = window.setTimeout(
+    () => toast.classList.remove("is-visible"),
+    2600,
+  );
+}
+
+async function copyText(value: string) {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    /* clipboard permission denied — fall back below */
+  }
+
+  try {
+    const field = document.createElement("textarea");
+    field.value = value;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.top = "-1000px";
+    document.body.append(field);
+    field.select();
+    const copied = document.execCommand("copy");
+    field.remove();
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+document.addEventListener("click", async (event) => {
+  const trigger =
+    event.target instanceof Element
+      ? event.target.closest<HTMLElement>("[data-copy-email]")
+      : null;
+  if (!trigger) return;
+
+  const email = trigger.dataset.copyEmail ?? "";
+  if (!email) return;
+
+  const copied = await copyText(email);
+  showToast(copied ? "Email copied" : email);
+});
+
+/* ------------------------------------------------------------------
+   Jump-to palette (⌘K / Ctrl+K)
+------------------------------------------------------------------ */
+const palette = document.getElementById("palette");
+const paletteInput = document.getElementById(
+  "palette-input",
+) as HTMLInputElement | null;
+const paletteList = document.getElementById("palette-list");
+const paletteTrigger = document.getElementById("palette-trigger");
+
+interface PaletteItem {
+  label: string;
+  hint: string;
+  href?: string;
+  run?: () => void;
+}
+
+let paletteOpen = false;
+let paletteMatches: PaletteItem[] = [];
+let paletteIndex = 0;
+let paletteReturnFocus: HTMLElement | null = null;
+
+function paletteItems(): PaletteItem[] {
+  const items: PaletteItem[] = [];
+
+  document
+    .querySelectorAll<HTMLElement>("[data-section]")
+    .forEach((section) => {
+      const heading = section.querySelector("h2");
+      if (!heading) return;
+      items.push({
+        label: heading.textContent?.trim() ?? section.id,
+        hint: "Section",
+        run: () => scrollToElement(section),
+      });
+    });
+
+  document
+    .querySelectorAll<HTMLAnchorElement>("[data-project-title]")
+    .forEach((link) => {
+      const href = link.getAttribute("href");
+      if (!href) return;
+      items.push({
+        label: link.textContent?.trim() ?? "",
+        hint: "Case study",
+        href,
+      });
+    });
+
+  const mailLink =
+    document.querySelector<HTMLAnchorElement>('a[href^="mailto:"]');
+  const mailHref = mailLink?.getAttribute("href");
+  if (mailHref)
+    items.push({ label: "Send an email", hint: "Contact", href: mailHref });
+
+  const cvLink = document.querySelector<HTMLAnchorElement>("a[download]");
+  const cvHref = cvLink?.getAttribute("href");
+  if (cvHref) items.push({ label: "Download CV", hint: "PDF", href: cvHref });
+
+  return items;
+}
+
+function runPaletteItem(item: PaletteItem | undefined) {
+  if (!item) return;
+  closePalette();
+
+  if (item.href) {
+    window.location.href = item.href;
+    return;
+  }
+
+  item.run?.();
+}
+
+function renderPalette(query: string) {
+  if (!paletteList) return;
+
+  const needle = query.trim().toLowerCase();
+  paletteMatches = paletteItems()
+    .filter(
+      (item) => needle === "" || item.label.toLowerCase().includes(needle),
+    )
+    .slice(0, 8);
+  paletteIndex = 0;
+  paletteList.replaceChildren();
+
+  if (paletteMatches.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "palette-empty";
+    empty.textContent = "Nothing matches — try another word.";
+    paletteList.append(empty);
+    return;
+  }
+
+  paletteMatches.forEach((item, index) => {
+    const li = document.createElement("li");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = index === 0 ? "palette-item is-active" : "palette-item";
+
+    const label = document.createElement("span");
+    label.textContent = item.label;
+    const hint = document.createElement("span");
+    hint.textContent = item.hint;
+
+    button.append(label, hint);
+    button.addEventListener("click", () => runPaletteItem(item));
+    li.append(button);
+    paletteList.append(li);
+  });
+}
+
+function highlightPalette() {
+  paletteList
+    ?.querySelectorAll<HTMLElement>(".palette-item")
+    .forEach((button, index) => {
+      button.classList.toggle("is-active", index === paletteIndex);
+    });
+}
+
+function openPalette() {
+  if (!palette || !paletteInput) return;
+
+  paletteOpen = true;
+  paletteReturnFocus =
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  palette.hidden = false;
+  palette.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+  lenis?.stop();
+
+  paletteInput.value = "";
+  renderPalette("");
+  paletteInput.focus();
+}
+
+function closePalette() {
+  if (!palette || !paletteOpen) return;
+
+  paletteOpen = false;
+  palette.hidden = true;
+  palette.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+  if (!menu?.classList.contains("is-open")) lenis?.start();
+
+  paletteReturnFocus?.focus();
+  paletteReturnFocus = null;
+}
+
+paletteTrigger?.addEventListener("click", () => openPalette());
+paletteInput?.addEventListener("input", () =>
+  renderPalette(paletteInput.value),
+);
+palette?.addEventListener("click", (event) => {
+  if (event.target === palette) closePalette();
+});
+
+document.addEventListener("keydown", (event) => {
+  const meta = event.metaKey || event.ctrlKey;
+
+  if (meta && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    if (paletteOpen) closePalette();
+    else openPalette();
+    return;
+  }
+
+  if (!paletteOpen) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closePalette();
+    return;
+  }
+
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    event.preventDefault();
+    if (paletteMatches.length === 0) return;
+    const step = event.key === "ArrowDown" ? 1 : -1;
+    paletteIndex =
+      (paletteIndex + step + paletteMatches.length) % paletteMatches.length;
+    highlightPalette();
+    return;
+  }
+
+  if (event.key === "Enter") {
+    event.preventDefault();
+    runPaletteItem(paletteMatches[paletteIndex]);
+  }
+});
+
+/* Cross-document view transitions land here too: refresh the scroll state. */
+window.addEventListener("pageshow", () => {
+  onScroll();
+  ScrollTrigger.refresh();
+});

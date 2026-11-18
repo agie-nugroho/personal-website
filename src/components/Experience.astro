@@ -11,7 +11,8 @@ import { experience } from "../data/experience";
       kicker="Education, an internship processing official statistics, student leadership, and a thesis built on differential equations."
     />
 
-    <div class="mt-12 md:mt-16">
+    <div class="experience-timeline mt-12 md:mt-16">
+      <div class="timeline-rail" aria-hidden="true"><span data-timeline-fill></span></div>
       {
         experience.map((item) => (
           <article
